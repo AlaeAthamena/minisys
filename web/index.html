@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>minisys - High Performance C HTTP & Key-Value Control Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="app-container">
+        <!-- Header Nav -->
+        <header class="navbar">
+            <div class="logo-group">
+                <div class="logo-icon">⚡</div>
+                <div>
+                    <h1 class="logo-title">minisys <span class="badge">C11 Core</span></h1>
+                    <p class="logo-subtitle">Raw Socket HTTP/1.1 & In-Memory KV Engine</p>
+                </div>
+            </div>
+            <div class="server-status">
+                <span class="pulse-dot"></span>
+                <span id="status-text">Daemon Active</span>
+                <span class="uptime-tag" id="uptime-display">Uptime: 0s</span>
+            </div>
+        </header>
+
+        <!-- Stats Cards Grid -->
+        <section class="stats-grid">
+            <div class="stat-card glass-card">
+                <div class="stat-header">
+                    <span class="stat-title">Total Requests</span>
+                    <span class="stat-icon">📊</span>
+                </div>
+                <div class="stat-value" id="stat-requests">0</div>
+                <div class="stat-footer" id="stat-req-rate">0 req/sec</div>
+            </div>
+
+            <div class="stat-card glass-card">
+                <div class="stat-header">
+                    <span class="stat-title">Active Keys</span>
+                    <span class="stat-icon">🔑</span>
+                </div>
+                <div class="stat-value" id="stat-keys">0</div>
+                <div class="stat-footer">In-Memory Hash Table</div>
+            </div>
+
+            <div class="stat-card glass-card">
+                <div class="stat-header">
+                    <span class="stat-title">Cache Hit Ratio</span>
+                    <span class="stat-icon">🎯</span>
+                </div>
+                <div class="stat-value" id="stat-hit-ratio">100%</div>
+                <div class="stat-footer" id="stat-hits-misses">0 Hits / 0 Misses</div>
+            </div>
+
+            <div class="stat-card glass-card">
+                <div class="stat-header">
+                    <span class="stat-title">Network IO</span>
+                    <span class="stat-icon">🚀</span>
+                </div>
+                <div class="stat-value" id="stat-io">0 KB</div>
+                <div class="stat-footer" id="stat-io-breakdown">Sent: 0B | Recv: 0B</div>
+            </div>
+        </section>
+
+        <!-- Main Content split into Key Browser & Benchmark Visualizer -->
+        <main class="content-grid">
+            <!-- Key-Value Store Manager -->
+            <section class="panel glass-card">
+                <div class="panel-header">
+                    <h2><span class="icon">🗄️</span> Key-Value Store Browser</h2>
+                    <button class="btn btn-secondary" onclick="loadKeys()">Refresh Keys</button>
+                </div>
+
+                <!-- Create/Update Form -->
+                <form id="kv-form" class="kv-form" onsubmit="handleKvSubmit(event)">
+                    <div class="form-row">
+                        <input type="text" id="input-key" placeholder="Key (e.g. user:1001)" required class="form-input">
+                        <input type="text" id="input-val" placeholder="Value (e.g. {'name':'Alice'})" required class="form-input">
+                        <input type="number" id="input-ttl" placeholder="TTL (sec)" min="0" class="form-input input-short">
+                        <button type="submit" class="btn btn-primary">SET Key</button>
+                    </div>
+                </form>
+
+                <!-- Key Table -->
+                <div class="table-container">
+                    <table class="kv-table">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kv-table-body">
+                            <tr>
+                                <td colspan="3" class="empty-state">No keys found in database. Add one above!</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- REST API & Benchmark Playground -->
+            <section class="panel glass-card">
+                <div class="panel-header">
+                    <h2><span class="icon">⚡</span> Browser Benchmark Suite</h2>
+                    <span class="badge badge-accent">Interactive</span>
+                </div>
+                <div class="bench-control">
+                    <p class="panel-desc">Run real-time parallel REST API stress tests directly from your browser to quantify requests/sec and response latency.</p>
+                    <div class="form-row">
+                        <label class="form-label">Concurrency:
+                            <select id="bench-concurrency" class="form-input">
+                                <option value="10">10 parallel workers</option>
+                                <option value="25" selected>25 parallel workers</option>
+                                <option value="50">50 parallel workers</option>
+                                <option value="100">100 parallel workers</option>
+                            </select>
+                        </label>
+                        <label class="form-label">Total Requests:
+                            <select id="bench-count" class="form-input">
+                                <option value="500">500 requests</option>
+                                <option value="1000" selected>1,000 requests</option>
+                                <option value="5000">5,000 requests</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-accent" id="bench-btn" onclick="runBrowserBenchmark()">Start Benchmark</button>
+                    </div>
+                </div>
+
+                <!-- Benchmark Live Progress & Output -->
+                <div class="bench-results" id="bench-results" style="display: none;">
+                    <div class="bench-metrics-grid">
+                        <div class="mini-metric">
+                            <span class="lbl">Throughput</span>
+                            <span class="val" id="bench-rps">0 req/s</span>
+                        </div>
+                        <div class="mini-metric">
+                            <span class="lbl">Avg Latency</span>
+                            <span class="val" id="bench-avg-lat">0 ms</span>
+                        </div>
+                        <div class="mini-metric">
+                            <span class="lbl">Completed</span>
+                            <span class="val" id="bench-completed">0 / 0</span>
+                        </div>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="bench-progress" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <!-- Quick Terminal Info -->
+                <div class="terminal-box">
+                    <div class="terminal-header">
+                        <span class="term-dot red"></span>
+                        <span class="term-dot yellow"></span>
+                        <span class="term-dot green"></span>
+                        <span class="term-title">CLI Quickstart</span>
+                    </div>
+                    <pre class="terminal-body"><code><span class="comment"># Build & Run Server Daemon</span>
+$ make run
+
+<span class="comment"># Connect with Interactive REPL Shell</span>
+$ ./bin/minisys-cli
+
+<span class="comment"># Run High-Throughput C Benchmark</span>
+$ ./bin/minisys-bench -c 50 -n 25000</code></pre>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
